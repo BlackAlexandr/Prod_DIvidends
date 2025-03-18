@@ -1,0 +1,48 @@
+/* Минимальные отступы */
+body {
+  margin: 0;
+  padding: 0;
+  font-family: Arial, sans-serif;
+}
+
+/* Цвет для заголовков столбцов */
+.ant-table-thead > tr > th {
+  background-color: #1976d2 !important; /* Синий цвет, как у Header */
+  color: #ffffff !important; /* Белый текст */
+  font-weight: bold;
+  text-align: center; /* Выравнивание заголовков по центру */
+}
+
+/* Чередование цветов строк */
+.even-row {
+  background-color: #f9f9f9 !important; /* Светло-серый */
+}
+
+.odd-row {
+  background-color: #ffffff !important; /* Белый */
+}
+
+/* Выделение выбранной строки */
+.selected-row {
+  background-color: #bae7ff !important; /* Ярко-голубой */
+}
+
+/* Общие стили для таблицы */
+.ant-table {
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+
+/* Убираем отступы для футера и хедера */
+header, footer {
+  padding: 0.5rem;
+}
+
+/* Основной контент */
+main {
+  flex: 1;
+  overflow-y: hidden;
+  padding: 0.5rem;
+}
