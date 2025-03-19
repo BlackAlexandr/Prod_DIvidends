@@ -2,47 +2,94 @@
 body {
   margin: 0;
   padding: 0;
-  font-family: Arial, sans-serif;
+  font-family: 'Inter', Arial, sans-serif;
+  transition: background-color 0.3s ease, color 0.3s ease;
 }
 
-/* Цвет для заголовков столбцов */
-.ant-table-thead > tr > th {
-  background-color: #1976d2 !important; /* Синий цвет, как у Header */
-  color: #ffffff !important; /* Белый текст */
-  font-weight: bold;
-  text-align: center; /* Выравнивание заголовков по центру */
+header,
+footer {
+  padding: 0.5rem;
+  text-align: center;
 }
 
-/* Чередование цветов строк */
+main {
+  flex: 1;
+  overflow-y: hidden;
+  padding: 0.5rem;
+}
+
+/* Чередование строк таблицы */
 .even-row {
-  background-color: #f9f9f9 !important; /* Светло-серый */
+  background-color: #161B22 !important;
 }
 
 .odd-row {
-  background-color: #ffffff !important; /* Белый */
+  background-color: #1E232A !important;
 }
 
 /* Выделение выбранной строки */
 .selected-row {
-  background-color: #bae7ff !important; /* Ярко-голубой */
+  /* background-color: #388BFF !important;
+  color: #FFFFFF !important; */
+}
+
+/* Наведение на строку */
+.ant-table-tbody > tr:hover > td {
+  background-color: #bcc0c5 !important; /* Светлее на пару оттенков */
+  color: #FFFFFF !important; /* Более яркий текст */
+}
+
+/* Строки таблицы */
+.ant-table-tbody > tr > td {
+  background-color: #1E232A !important; /* Темно-серый фон */
+  color: #E6E6E6 !important; /* Белый текст */
+  border-bottom: 1px solid #30363D; /* Тонкая граница */
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+.ant-table-tbody > tr:nth-child(even) > td {
+  background-color: #2C323A !important; /* Чуть светлее для четных строк */
+}
+
+
+/* Заголовки столбцов */
+.ant-table-thead > tr > th {
+  background-color: #1E232A !important; /* Темно-серый фон */
+  color: #E6E6E6 !important; /* Белый текст */
+  font-weight: bold;
+  text-align: center;
+  border-bottom: 1px solid #30363D; /* Тонкая граница */
 }
 
 /* Общие стили для таблицы */
 .ant-table {
   border-radius: 8px;
   overflow: hidden;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
 }
 
-
-/* Убираем отступы для футера и хедера */
-header, footer {
-  padding: 0.5rem;
+[data-theme='dark'] .ant-table {
+  box-shadow: 0 4px 8px rgba(255, 255, 255, 0.05);
 }
 
-/* Основной контент */
-main {
-  flex: 1;
-  overflow-y: hidden;
-  padding: 0.5rem;
+/* Лоадер */
+.ant-spin {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100%;
+}
+
+/* Поиск */
+.ant-input-search {
+  width: 300px;
+  margin-bottom: 0.5rem;
+  background-color: #161B22;
+  color: #E6E6E6;
+  border: 1px solid #30363D;
+  border-radius: 8px;
+}
+
+.ant-input-search:hover {
+  border-color: #388BFF;
 }
