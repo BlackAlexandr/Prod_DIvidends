@@ -2,6 +2,7 @@ from flask import jsonify, request, session
 from database import get_clients_db
 from models_clients import User
 
+
 def register_user():
     db = next(get_clients_db())
     data = request.get_json()

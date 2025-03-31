@@ -1,17 +1,19 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Form, Input, Button, message } from 'antd';
-import { useNavigate } from 'react-router-dom';
 import { LockOutlined, UserOutlined, MailOutlined } from '@ant-design/icons';
-import { Box, Typography, IconButton } from '@mui/material';
+import { Box, Typography } from '@mui/material';
 
-const AuthPage = ({ darkMode }) => {
+const AuthPage = ({ darkMode, toggleDarkMode }) => {
   const [isLogin, setIsLogin] = useState(true);
   const [loading, setLoading] = useState(false);
-  const navigate = useNavigate();
+  // Эффект для отслеживания изменений darkMode
+  useEffect(() => {
+    console.log('Тема обновлена:', darkMode);
+  }, [darkMode]);
 
   // Обработка отправки формы
   const handleAuth = async (values) => {
-    setLoading(true); // Включаем индикатор загрузки
+    setLoading(true);
     const endpoint = isLogin ? 'http://localhost:5000/api/login' : 'http://localhost:5000/api/register';
 
     try {
@@ -25,19 +27,17 @@ const AuthPage = ({ darkMode }) => {
       const data = await response.json();
 
       if (response.ok) {
-        // Успешная авторизация/регистрация
         message.success(data.message || 'Успешно!');
-        sessionStorage.setItem('user_id', 'true'); // Сохраняем состояние авторизации
-        window.location.href = '/main'; // Перенаправляем на главную страницу
+        sessionStorage.setItem('user_id', 'true');
+        window.location.href = '/main';
       } else {
-        // Ошибка
         message.error(data.error || 'Произошла ошибка.');
       }
     } catch (error) {
       console.error('Ошибка при отправке данных:', error);
       message.error('Произошла ошибка. Попробуйте позже.');
     } finally {
-      setLoading(false); // Выключаем индикатор загрузки
+      setLoading(false);
     }
   };
 
@@ -82,7 +82,11 @@ const AuthPage = ({ darkMode }) => {
                 prefix={<UserOutlined style={{ color: darkMode ? '#E6E6E6' : 'rgba(0,0,0,.25)' }} />}
                 placeholder="Имя"
                 size="large"
-                style={{ background: darkMode ? '#1E232A' : '#ffffff', color: darkMode ? '#E6E6E6' : '#000000' }}
+                style={{
+                  background: darkMode ? '#1E232A' : '#ffffff',
+                  color: darkMode ? '#E6E6E6' : '#000000',
+                  border: darkMode ? '1px solid #30363D' : '1px solid #ccc',
+                }}
               />
             </Form.Item>
           )}
@@ -96,7 +100,11 @@ const AuthPage = ({ darkMode }) => {
               prefix={<UserOutlined style={{ color: darkMode ? '#E6E6E6' : 'rgba(0,0,0,.25)' }} />}
               placeholder="Логин"
               size="large"
-              style={{ background: darkMode ? '#1E232A' : '#ffffff', color: darkMode ? '#E6E6E6' : '#000000' }}
+              style={{
+                background: darkMode ? '#1E232A' : '#ffffff',
+                color: darkMode ? '#E6E6E6' : '#000000',
+                border: darkMode ? '1px solid #30363D' : '1px solid #ccc',
+              }}
             />
           </Form.Item>
 
@@ -113,7 +121,11 @@ const AuthPage = ({ darkMode }) => {
                 prefix={<MailOutlined style={{ color: darkMode ? '#E6E6E6' : 'rgba(0,0,0,.25)' }} />}
                 placeholder="Email"
                 size="large"
-                style={{ background: darkMode ? '#1E232A' : '#ffffff', color: darkMode ? '#E6E6E6' : '#000000' }}
+                style={{
+                  background: darkMode ? '#1E232A' : '#ffffff',
+                  color: darkMode ? '#E6E6E6' : '#000000',
+                  border: darkMode ? '1px solid #30363D' : '1px solid #ccc',
+                }}
               />
             </Form.Item>
           )}
@@ -127,7 +139,11 @@ const AuthPage = ({ darkMode }) => {
               prefix={<LockOutlined style={{ color: darkMode ? '#E6E6E6' : 'rgba(0,0,0,.25)' }} />}
               placeholder="Пароль"
               size="large"
-              style={{ background: darkMode ? '#1E232A' : '#ffffff', color: darkMode ? '#E6E6E6' : '#000000' }}
+              style={{
+                background: darkMode ? '#1E232A' : '#ffffff',
+                color: darkMode ? '#E6E6E6' : '#000000',
+                border: darkMode ? '1px solid #30363D' : '1px solid #ccc',
+              }}
             />
           </Form.Item>
 
@@ -142,6 +158,7 @@ const AuthPage = ({ darkMode }) => {
               style={{
                 background: darkMode ? '#388BFF' : '#1976d2',
                 borderColor: darkMode ? '#388BFF' : '#1976d2',
+                color: '#ffffff',
                 '&:hover': {
                   background: darkMode ? '#1c6ab9' : '#115293',
                 },
@@ -155,7 +172,14 @@ const AuthPage = ({ darkMode }) => {
           <Typography
             variant="body2"
             align="center"
-            sx={{ color: darkMode ? '#E6E6E6' : '#000000', cursor: 'pointer', textDecoration: 'underline' }}
+            sx={{
+              color: darkMode ? '#E6E6E6' : '#000000',
+              cursor: 'pointer',
+              textDecoration: 'underline',
+              '&:hover': {
+                color: darkMode ? '#388BFF' : '#1976d2',
+              },
+            }}
             onClick={() => setIsLogin(!isLogin)}
           >
             {isLogin ? 'Нет аккаунта? Зарегистрироваться' : 'Уже есть аккаунт? Войти'}

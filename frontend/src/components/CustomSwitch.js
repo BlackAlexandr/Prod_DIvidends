@@ -75,7 +75,7 @@ const Switch = ({ value, onChange, darkMode }) => {
         active={activeOption === 'confirmed'}
         darkMode={darkMode}
       >
-        Подтверждённые
+        Одобренные
       </SwitchOption>
 
       {/* Ползунок */}

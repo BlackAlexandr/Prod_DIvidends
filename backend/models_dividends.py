@@ -65,3 +65,18 @@ class DividendForecast(Base):
             'Forecast_Profit_interest': self.Forecast_Profit_interest
         }
 
+class HistoricalDividends(Base):
+    __tablename__ = 'HistoricalDividends'
+    ID = Column(Integer, primary_key=True)
+    Ticker = Column(String, ForeignKey('Companies.Ticker'), nullable=False)  # Связь с компанией
+    Date = Column(Date, nullable=False)
+    Profit_rub = Column(Float, nullable=False)
+    Profit_interest = Column(Float, nullable=False)
+    def to_dict(self):
+        return {
+            'ID': self.ID,
+            'Ticker': self.Ticker,
+            'Date': self.Forecast_Date,
+            'Profit_rub': self.Forecast_Profit_rub,
+            'Profit_interest': self.Forecast_Profit_interest
+        }

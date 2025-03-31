@@ -15,12 +15,23 @@ const HeaderContainer = styled.div`
   background-color: ${({ $darkMode }) => ($darkMode ? '#1E232A' : '#388BFF')}; /* Голубой цвет для светлой темы */
   color: ${({ $darkMode }) => ($darkMode ? '#E6E6E6' : '#ffffff')}; /* Белый текст для светлой темы */
   border-bottom: 1px solid ${({ $darkMode }) => ($darkMode ? '#30363D' : '#ccc')};
+
+  @media (max-width: 600px) {
+    flex-direction: column;
+    height: auto;
+    padding: 10px;
+  }
 `;
 
 const Title = styled.h1`
   font-size: 20px;
   font-weight: bold;
   margin: 0;
+
+  @media (max-width: 600px) {
+    font-size: 16px;
+    text-align: center;
+  }
 `;
 
 const StyledIconButton = styled(IconButton)`
@@ -36,6 +47,10 @@ const StyledIconButton = styled(IconButton)`
     &:active {
       transform: scale(1); /* Возвращаем размер при клике */
     }
+
+    @media (max-width: 600px) {
+      margin: 5px 0;
+    }
   }
 `;
 
@@ -43,6 +58,12 @@ const AuthButtonWrapper = styled.div`
   display: flex;
   align-items: center;
   gap: 8px;
+
+  @media (max-width: 600px) {
+    flex-direction: column;
+    width: 100%;
+    align-items: center;
+  }
 `;
 
 const StyledText = styled(Typography)`
@@ -50,6 +71,11 @@ const StyledText = styled(Typography)`
   font-weight: 500;
   color: ${({ $darkMode }) => ($darkMode ? '#E6E6E6' : '#ffffff')}; /* Цвет текста */
   transition: all 0.3s ease; /* Плавные переходы */
+
+  @media (max-width: 600px) {
+    font-size: 12px;
+    margin-left: 5px;
+  }
 `;
 
 const Header = ({ darkMode, toggleDarkMode }) => {

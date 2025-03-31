@@ -1,81 +1,28 @@
-import React, { useState, useEffect, useContext, useMemo } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Table, Spin, ConfigProvider, Empty } from 'antd';
 import { TextField } from '@mui/material';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import CustomSwitch from './CustomSwitch';
-import { fetchCompanies, fetchHourlyData } from '../api';
+import { fetchFreeCompanies, fetchHourlyData } from '../api';
 import { message } from 'antd';
-import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
+import {
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  Tooltip,
+  ResponsiveContainer,
+} from 'recharts';
 import { useNavigate } from 'react-router-dom';
-import { ChartDataContext } from '../context/ChartDataContext';
 
-const MemoizedChart = React.memo(({ data, darkMode, ticker, navigate }) => {
-  if (!data || data.length === 0) {
-    return (
-      <div style={{ 
-        textAlign: 'center', 
-        color: darkMode ? '#E6E6E6' : '#000000', 
-        fontSize: '0.8rem',
-        height: 50,
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center'
-      }}>
-        Нет данных
-      </div>
-    );
-  }
-
-  return (
-    <ResponsiveContainer width="100%" height={50}>
-      <LineChart
-        data={data}
-        margin={{ top: 5, right: 0, left: 0, bottom: 5 }}
-        onClick={() => navigate(`/chart/${ticker}`)}
-      >
-        <XAxis 
-          dataKey="name" 
-          hide 
-        />
-        <YAxis 
-          hide 
-          domain={['auto', 'auto']} 
-        />
-        <Tooltip
-          contentStyle={{
-            backgroundColor: darkMode ? '#1E232A' : '#ffffff',
-            color: darkMode ? '#E6E6E6' : '#000000',
-            borderRadius: 6,
-            border: darkMode ? '1px solid #30363D' : '1px solid #ddd'
-          }}
-          formatter={(value) => [value, 'Цена']}
-          labelFormatter={(label) => `Дата: ${label}`}
-        />
-        <Line
-          type="monotone"
-          dataKey="profit"
-          stroke={darkMode ? '#388BFF' : '#1976d2'}
-          dot={false}
-          strokeWidth={2}
-          activeDot={{ r: 4 }}
-        />
-      </LineChart>
-    </ResponsiveContainer>
-  );
-}, (prevProps, nextProps) => {
-  return prevProps.darkMode === nextProps.darkMode && 
-         prevProps.ticker === nextProps.ticker &&
-         JSON.stringify(prevProps.data) === JSON.stringify(nextProps.data);
-});
-
-const DataTable = ({ darkMode }) => {
+const FreeDataTable = ({ darkMode }) => {
   const [data, setData] = useState([]);
+  const [hourlyData, setHourlyData] = useState({});
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(true);
   const [chartLoading, setChartLoading] = useState(false);
   const [filterMode, setFilterMode] = useState('all');
   const navigate = useNavigate();
-  const { chartData, setChartData } = useContext(ChartDataContext);
 
   useEffect(() => {
     const fetchAllData = async () => {
@@ -83,10 +30,9 @@ const DataTable = ({ darkMode }) => {
       setChartLoading(true);
       
       try {
-        // Загружаем данные компаний
-        const companies = await fetchCompanies();
+        const companies = await fetchFreeCompanies();
         if (!Array.isArray(companies)) {
-          throw new Error('Получен неверный формат данных');
+          throw new Error('Invalid data format received from the server.');
         }
         setData(companies);
 
@@ -96,24 +42,24 @@ const DataTable = ({ darkMode }) => {
             const chartData = await fetchHourlyData(company.Ticker);
             return { ticker: company.Ticker, data: chartData };
           } catch (error) {
-            console.error(`Ошибка загрузки данных для ${company.Ticker}:`, error);
+            console.error(`Error loading data for ${company.Ticker}:`, error);
             return { ticker: company.Ticker, data: null };
           }
         });
 
         const charts = await Promise.all(chartPromises);
-        const newChartData = {};
+        const newHourlyData = {};
         
         charts.forEach(({ ticker, data }) => {
           if (data && data.length > 0) {
-            newChartData[ticker] = data;
+            newHourlyData[ticker] = data;
           }
         });
 
-        setChartData(prev => ({ ...prev, ...newChartData }));
+        setHourlyData(newHourlyData);
       } catch (error) {
-        console.error('Ошибка загрузки данных:', error);
-        message.error('Не удалось загрузить данные. Пожалуйста, попробуйте позже.');
+        console.error('Error fetching data:', error);
+        message.error('Failed to load data. Please try again later.');
       } finally {
         setLoading(false);
         setChartLoading(false);
@@ -121,26 +67,56 @@ const DataTable = ({ darkMode }) => {
     };
 
     fetchAllData();
-  }, [setChartData]);
+  }, []);
 
   const filteredData = useMemo(() => {
-    if (!data) return [];
-    
-    return data.filter(item => {
-      const matchesSearch = 
-        item.Name.toLowerCase().includes(search.toLowerCase()) ||
-        item.Ticker.toLowerCase().includes(search.toLowerCase()) ||
-        (item.Dividend_Date && item.Dividend_Date.toLowerCase().includes(search.toLowerCase()));
-      
-      const matchesFilter = filterMode === 'all' || item.Is_Approved;
-      
-      return matchesSearch && matchesFilter;
+    return data.filter((item) => {
+      const searchLower = search.toLowerCase();
+      const matchesSearch =
+        item.Name.toLowerCase().includes(searchLower) ||
+        item.Ticker.toLowerCase().includes(searchLower) ||
+        (item.Dividend_Date && item.Dividend_Date.toLowerCase().includes(searchLower));
+      const matchesApproval = filterMode === 'all' || item.Is_Approved;
+      return matchesSearch && matchesApproval;
     });
   }, [data, search, filterMode]);
 
-  const columns = useMemo(() => [
+  const MemoizedChart = React.memo(({ data, darkMode, ticker }) => {
+    return (
+      <ResponsiveContainer width="100%" height={50}>
+        <LineChart
+          data={data}
+          margin={{ top: 5, right: 0, left: 0, bottom: 5 }}
+          onClick={() => navigate(`/chart/${ticker}`)}
+        >
+          <XAxis dataKey="name" hide />
+          <YAxis hide domain={['auto', 'auto']} />
+          <Tooltip
+            contentStyle={{
+              backgroundColor: darkMode ? '#1E232A' : '#ffffff',
+              color: darkMode ? '#E6E6E6' : '#000000',
+              borderRadius: 6,
+              border: darkMode ? '1px solid #30363D' : '1px solid #ddd'
+            }}
+            formatter={(value) => [value, 'Цена']}
+            labelFormatter={(label) => `Дата: ${label}`}
+          />
+          <Line
+            type="monotone"
+            dataKey="profit"
+            stroke={darkMode ? '#388BFF' : '#1976d2'}
+            dot={false}
+            strokeWidth={2}
+            activeDot={{ r: 4 }}
+          />
+        </LineChart>
+      </ResponsiveContainer>
+    );
+  });
+
+  const columns = [
     {
-      title: 'Компания',
+      title: 'Company',
       dataIndex: 'Name',
       key: 'Name',
       width: 240,
@@ -148,13 +124,13 @@ const DataTable = ({ darkMode }) => {
         <div
           style={{ 
             display: 'flex', 
-            alignItems: 'center', 
+            alignItems: 'center',
             cursor: 'pointer',
             padding: '8px 0'
           }}
           onClick={(e) => {
-            e.stopPropagation(); // Предотвращаем всплытие
-            navigate(`/historical/${record.Ticker}`); // Клик ведет на исторические данные
+            e.stopPropagation();
+            navigate(`/historical/${record.Ticker}`);
           }}
         >
           <CheckCircleIcon
@@ -261,16 +237,17 @@ const DataTable = ({ darkMode }) => {
     },
     {
       title: 'График',
-      key: 'chart',
+      key: 'profitChart',
       width: 150,
       align: 'center',
       render: (record) => {
+        const ticker = record.Ticker;
+
         if (chartLoading) {
           return <Spin size="small" />;
         }
-        
-        // Проверяем наличие данных для графика
-        if (!chartData[record.Ticker] || chartData[record.Ticker].length === 0) {
+
+        if (!hourlyData[ticker] || hourlyData[ticker].length === 0) {
           return (
             <div style={{
               height: 50,
@@ -284,18 +261,17 @@ const DataTable = ({ darkMode }) => {
             </div>
           );
         }
-        
+
         return (
           <MemoizedChart
-            data={chartData[record.Ticker]}
+            data={hourlyData[ticker]}
             darkMode={darkMode}
-            ticker={record.Ticker}
-            navigate={navigate}
+            ticker={ticker}
           />
         );
       },
     },
-  ], [darkMode, navigate, chartData, chartLoading]);
+  ];
 
   return (
     <ConfigProvider
@@ -382,7 +358,7 @@ const DataTable = ({ darkMode }) => {
             locale={{
               emptyText: (
                 <Empty
-                  description="Нет данных для отображения"
+                  description="No data available"
                   imageStyle={{ height: 60 }}
                 />
               )
@@ -397,4 +373,4 @@ const DataTable = ({ darkMode }) => {
   );
 };
 
-export default React.memo(DataTable);
+export default React.memo(FreeDataTable);
