@@ -19,25 +19,42 @@ const FreeDataTable = ({ darkMode }) => {
   const [data, setData] = useState([]);
   const [hourlyData, setHourlyData] = useState({});
   const [search, setSearch] = useState('');
-  const [loading, setLoading] = useState(true);
-  const [chartLoading, setChartLoading] = useState(false);
+  const [loading, setLoading] = useState(false);
   const [filterMode, setFilterMode] = useState('all');
   const navigate = useNavigate();
 
   useEffect(() => {
-    const fetchAllData = async () => {
+    const fetchInitialData = async () => {
       setLoading(true);
-      setChartLoading(true);
-      
       try {
         const companies = await fetchFreeCompanies();
         if (!Array.isArray(companies)) {
           throw new Error('Invalid data format received from the server.');
         }
         setData(companies);
+      } catch (error) {
+        console.error('Error fetching data:', error);
+        message.error('Failed to load data. Please try again later.');
+      } finally {
+        setLoading(false);
+      }
+    };
 
-        // Загружаем данные графиков для всех компаний
-        const chartPromises = companies.map(async company => {
+    fetchInitialData();
+  }, []);
+
+  useEffect(() => {
+    if (data.length === 0) return;
+
+    // Фоновая загрузка данных графиков
+    const loadChartData = async () => {
+      const newHourlyData = {};
+      
+      // Загружаем данные графиков порциями по 5 компаний
+      for (let i = 0; i < data.length; i += 5) {
+        const chunk = data.slice(i, i + 5);
+        
+        const chartPromises = chunk.map(async company => {
           try {
             const chartData = await fetchHourlyData(company.Ticker);
             return { ticker: company.Ticker, data: chartData };
@@ -48,7 +65,6 @@ const FreeDataTable = ({ darkMode }) => {
         });
 
         const charts = await Promise.all(chartPromises);
-        const newHourlyData = {};
         
         charts.forEach(({ ticker, data }) => {
           if (data && data.length > 0) {
@@ -56,18 +72,13 @@ const FreeDataTable = ({ darkMode }) => {
           }
         });
 
-        setHourlyData(newHourlyData);
-      } catch (error) {
-        console.error('Error fetching data:', error);
-        message.error('Failed to load data. Please try again later.');
-      } finally {
-        setLoading(false);
-        setChartLoading(false);
+        // Обновляем состояние после каждой порции
+        setHourlyData(prev => ({ ...prev, ...newHourlyData }));
       }
     };
 
-    fetchAllData();
-  }, []);
+    loadChartData();
+  }, [data]);
 
   const filteredData = useMemo(() => {
     return data.filter((item) => {
@@ -81,7 +92,7 @@ const FreeDataTable = ({ darkMode }) => {
     });
   }, [data, search, filterMode]);
 
-  const MemoizedChart = React.memo(({ data, darkMode, ticker }) => {
+  const ChartComponent = ({ data, darkMode, ticker }) => {
     return (
       <ResponsiveContainer width="100%" height={50}>
         <LineChart
@@ -112,7 +123,7 @@ const FreeDataTable = ({ darkMode }) => {
         </LineChart>
       </ResponsiveContainer>
     );
-  });
+  };
 
   const columns = [
     {
@@ -243,11 +254,22 @@ const FreeDataTable = ({ darkMode }) => {
       render: (record) => {
         const ticker = record.Ticker;
 
-        if (chartLoading) {
-          return <Spin size="small" />;
+        if (!hourlyData[ticker]) {
+          return (
+            <div style={{
+              height: 50,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              color: darkMode ? '#E6E6E6' : '#666',
+              fontSize: '0.8rem'
+            }}>
+              Загрузка...
+            </div>
+          );
         }
 
-        if (!hourlyData[ticker] || hourlyData[ticker].length === 0) {
+        if (hourlyData[ticker].length === 0) {
           return (
             <div style={{
               height: 50,
@@ -263,7 +285,7 @@ const FreeDataTable = ({ darkMode }) => {
         }
 
         return (
-          <MemoizedChart
+          <ChartComponent
             data={hourlyData[ticker]}
             darkMode={darkMode}
             ticker={ticker}
@@ -373,4 +395,4 @@ const FreeDataTable = ({ darkMode }) => {
   );
 };
 
-export default React.memo(FreeDataTable);
+export default FreeDataTable;

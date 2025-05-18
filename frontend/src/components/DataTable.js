@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useContext, useMemo } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
 import { Table, Spin, ConfigProvider, Empty } from 'antd';
 import { TextField } from '@mui/material';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
@@ -9,17 +9,67 @@ import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'rec
 import { useNavigate } from 'react-router-dom';
 import { ChartDataContext } from '../context/ChartDataContext';
 
-const MemoizedChart = React.memo(({ data, darkMode, ticker, navigate }) => {
-  if (!data || data.length === 0) {
+// === MoexChart вместо MemoizedChart без React.memo ===
+const MoexChart = ({ ticker, darkMode, navigate }) => {
+  const { chartData, setChartData } = useContext(ChartDataContext);
+  const [isLoading, setIsLoading] = useState(false);
+  const [hasNoData, setHasNoData] = useState(false);
+
+  useEffect(() => {
+    const loadChart = async () => {
+      if (!ticker) return;
+
+      // Проверяем localStorage
+      const lastFetchKey = `last_fetch_${ticker}`;
+      const lastFetchTime = localStorage.getItem(lastFetchKey);
+      const now = new Date();
+
+      // Если данные были загружены меньше 24 часов назад — выходим
+      if (
+        lastFetchTime &&
+        now - new Date(parseInt(lastFetchTime, 10)) < 24 * 60 * 60 * 1000
+      ) {
+        if (chartData[ticker]) return;
+      }
+
+      setIsLoading(true);
+      setHasNoData(false);
+
+      try {
+        const data = await fetchHourlyData(ticker);
+        if (data?.length > 0) {
+          setChartData(prev => ({
+            ...prev,
+            [ticker]: {
+              data: data,
+              lastUpdated: now.toISOString()
+            }
+          }));
+          localStorage.setItem(lastFetchKey, now.getTime().toString());
+        } else {
+          setHasNoData(true);
+        }
+      } catch (error) {
+        console.error(`Ошибка для ${ticker}:`, error);
+        setHasNoData(true);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadChart();
+  }, [ticker]); // ❗️Только `ticker` в зависимостях
+
+  if (isLoading) return <Spin size="small" />;
+  if (hasNoData || !chartData[ticker]?.data) {
     return (
-      <div style={{ 
-        textAlign: 'center', 
-        color: darkMode ? '#E6E6E6' : '#000000', 
-        fontSize: '0.8rem',
+      <div style={{
         height: 50,
         display: 'flex',
         alignItems: 'center',
-        justifyContent: 'center'
+        justifyContent: 'center',
+        color: darkMode ? '#E6E6E6' : '#666',
+        fontSize: '0.8rem'
       }}>
         Нет данных
       </div>
@@ -29,18 +79,12 @@ const MemoizedChart = React.memo(({ data, darkMode, ticker, navigate }) => {
   return (
     <ResponsiveContainer width="100%" height={50}>
       <LineChart
-        data={data}
+        data={chartData[ticker].data}
         margin={{ top: 5, right: 0, left: 0, bottom: 5 }}
         onClick={() => navigate(`/chart/${ticker}`)}
       >
-        <XAxis 
-          dataKey="name" 
-          hide 
-        />
-        <YAxis 
-          hide 
-          domain={['auto', 'auto']} 
-        />
+        <XAxis dataKey="name" hide />
+        <YAxis hide domain={['auto', 'auto']} />
         <Tooltip
           contentStyle={{
             backgroundColor: darkMode ? '#1E232A' : '#ffffff',
@@ -62,17 +106,13 @@ const MemoizedChart = React.memo(({ data, darkMode, ticker, navigate }) => {
       </LineChart>
     </ResponsiveContainer>
   );
-}, (prevProps, nextProps) => {
-  return prevProps.darkMode === nextProps.darkMode && 
-         prevProps.ticker === nextProps.ticker &&
-         JSON.stringify(prevProps.data) === JSON.stringify(nextProps.data);
-});
+};
 
+// === Основной компонент DataTable ===
 const DataTable = ({ darkMode }) => {
   const [data, setData] = useState([]);
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(true);
-  const [chartLoading, setChartLoading] = useState(false);
   const [filterMode, setFilterMode] = useState('all');
   const navigate = useNavigate();
   const { chartData, setChartData } = useContext(ChartDataContext);
@@ -80,65 +120,32 @@ const DataTable = ({ darkMode }) => {
   useEffect(() => {
     const fetchAllData = async () => {
       setLoading(true);
-      setChartLoading(true);
-      
       try {
-        // Загружаем данные компаний
         const companies = await fetchCompanies();
         if (!Array.isArray(companies)) {
           throw new Error('Получен неверный формат данных');
         }
         setData(companies);
-
-        // Загружаем данные графиков для всех компаний
-        const chartPromises = companies.map(async company => {
-          try {
-            const chartData = await fetchHourlyData(company.Ticker);
-            return { ticker: company.Ticker, data: chartData };
-          } catch (error) {
-            console.error(`Ошибка загрузки данных для ${company.Ticker}:`, error);
-            return { ticker: company.Ticker, data: null };
-          }
-        });
-
-        const charts = await Promise.all(chartPromises);
-        const newChartData = {};
-        
-        charts.forEach(({ ticker, data }) => {
-          if (data && data.length > 0) {
-            newChartData[ticker] = data;
-          }
-        });
-
-        setChartData(prev => ({ ...prev, ...newChartData }));
       } catch (error) {
         console.error('Ошибка загрузки данных:', error);
         message.error('Не удалось загрузить данные. Пожалуйста, попробуйте позже.');
       } finally {
         setLoading(false);
-        setChartLoading(false);
       }
     };
-
     fetchAllData();
-  }, [setChartData]);
+  }, []);
 
-  const filteredData = useMemo(() => {
-    if (!data) return [];
-    
-    return data.filter(item => {
-      const matchesSearch = 
-        item.Name.toLowerCase().includes(search.toLowerCase()) ||
-        item.Ticker.toLowerCase().includes(search.toLowerCase()) ||
-        (item.Dividend_Date && item.Dividend_Date.toLowerCase().includes(search.toLowerCase()));
-      
-      const matchesFilter = filterMode === 'all' || item.Is_Approved;
-      
-      return matchesSearch && matchesFilter;
-    });
-  }, [data, search, filterMode]);
+  const filteredData = data.filter(item => {
+    const matchesSearch =
+      item.Name.toLowerCase().includes(search.toLowerCase()) ||
+      item.Ticker.toLowerCase().includes(search.toLowerCase()) ||
+      (item.Dividend_Date && item.Dividend_Date.toLowerCase().includes(search.toLowerCase()));
+    const matchesFilter = filterMode === 'all' || item.Is_Approved;
+    return matchesSearch && matchesFilter;
+  });
 
-  const columns = useMemo(() => [
+  const columns = [
     {
       title: 'Компания',
       dataIndex: 'Name',
@@ -153,8 +160,8 @@ const DataTable = ({ darkMode }) => {
             padding: '8px 0'
           }}
           onClick={(e) => {
-            e.stopPropagation(); // Предотвращаем всплытие
-            navigate(`/historical/${record.Ticker}`); // Клик ведет на исторические данные
+            e.stopPropagation();
+            navigate(`/historical/${record.Ticker}`);
           }}
         >
           <CheckCircleIcon
@@ -264,38 +271,15 @@ const DataTable = ({ darkMode }) => {
       key: 'chart',
       width: 150,
       align: 'center',
-      render: (record) => {
-        if (chartLoading) {
-          return <Spin size="small" />;
-        }
-        
-        // Проверяем наличие данных для графика
-        if (!chartData[record.Ticker] || chartData[record.Ticker].length === 0) {
-          return (
-            <div style={{
-              height: 50,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              color: darkMode ? '#E6E6E6' : '#666',
-              fontSize: '0.8rem'
-            }}>
-              Нет данных
-            </div>
-          );
-        }
-        
-        return (
-          <MemoizedChart
-            data={chartData[record.Ticker]}
-            darkMode={darkMode}
-            ticker={record.Ticker}
-            navigate={navigate}
-          />
-        );
-      },
+      render: (record) => (
+        <MoexChart
+          ticker={record.Ticker}
+          darkMode={darkMode}
+          navigate={navigate}
+        />
+      ),
     },
-  ], [darkMode, navigate, chartData, chartLoading]);
+  ];
 
   return (
     <ConfigProvider
@@ -343,7 +327,7 @@ const DataTable = ({ darkMode }) => {
               },
             }}
             sx={{
-              '& .MuiOutlinedInput-root': {
+              '& .MuiOutlinedInput.root': {
                 '& fieldset': {
                   borderColor: darkMode ? '#30363D' : '#ccc',
                 },
@@ -356,14 +340,12 @@ const DataTable = ({ darkMode }) => {
               },
             }}
           />
-          
           <CustomSwitch
             value={filterMode}
             onChange={setFilterMode}
             darkMode={darkMode}
           />
         </div>
-        
         <div style={{ 
           flex: 1, 
           overflow: 'hidden',
@@ -397,4 +379,4 @@ const DataTable = ({ darkMode }) => {
   );
 };
 
-export default React.memo(DataTable);
+export default DataTable;
